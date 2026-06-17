@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Create account{% endblock %}
+
+{% block body %}
+<div class="auth-wrap">
+    <div class="auth-card">
+        <div class="brand">
+            <div class="brand-logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+            </div>
+            <div class="brand-text">
+                <h1>{{ app_name }}</h1>
+                <p>End-to-end encrypted · AES-256 + RSA-2048</p>
+            </div>
+        </div>
+
+        <div class="auth-body">
+            <h2>Create your account</h2>
+            <p class="sub">A unique RSA key pair is generated for you on sign-up.</p>
+
+            <div id="alert" class="alert hidden"></div>
+
+            <form id="registerForm" novalidate>
+                <div class="field">
+                    <label for="username">Username</label>
+                    <input class="input" type="text" id="username" autocomplete="username" placeholder="3+ letters or numbers" required>
+                </div>
+                <div class="field">
+                    <label for="password">Password</label>
+                    <input class="input" type="password" id="password" autocomplete="new-password" placeholder="••••••••" required>
+                    <div class="strength" id="strength"><span></span><span></span><span></span><span></span></div>
+                    <small id="strengthLabel">Use 8+ chars with upper, lower, digits & symbols.</small>
+                </div>
+                <div class="field">
+                    <label for="confirm">Confirm password</label>
+                    <input class="input" type="password" id="confirm" autocomplete="new-password" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block" id="submitBtn">
+                    <span class="label">Create account</span>
+                </button>
+            </form>
+
+            <p class="sub" style="text-align:center;margin:22px 0 0;font-size:13.5px;">
+                Already have an account? <a href="{{ url_for('login') }}">Sign in</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const form = document.getElementById('registerForm');
+const alertBox = document.getElementById('alert');
+const submitBtn = document.getElementById('submitBtn');
+const pwd = document.getElementById('password');
+const bars = document.querySelectorAll('#strength span');
+const strengthLabel = document.getElementById('strengthLabel');
+
+const STRENGTH = [
+    { c: 'var(--danger)',  t: 'Weak password' },
+    { c: 'var(--warning)', t: 'Fair — add more variety' },
+    { c: 'var(--warning)', t: 'Good password' },
+    { c: 'var(--success)', t: 'Strong password' }
+];
+
+function score(p) {
+    let s = 0;
+    if (p.length >= 8) s++;
+    if (p.length >= 12) s++;
+    if (/[a-z]/.test(p) && /[A-Z]/.test(p)) s++;
+    if (/[0-9]/.test(p)) s++;
+    if (/[^a-zA-Z0-9]/.test(p)) s++;
+    return Math.min(Math.max(s - 1, 0), 4);
+}
+
+pwd.addEventListener('input', () => {
+    const v = pwd.value;
+    const lvl = v ? score(v) : 0;
+    bars.forEach((b, i) => b.style.background = (v && i < lvl) ? STRENGTH[lvl-1].c : 'var(--bg-elev-3)');
+    if (v && lvl > 0) { strengthLabel.textContent = STRENGTH[lvl-1].t; strengthLabel.style.color = STRENGTH[lvl-1].c; }
+    else { strengthLabel.textContent = 'Use 8+ chars with upper, lower, digits & symbols.'; strengthLabel.style.color = 'var(--text-muted)'; }
+});
+
+function showAlert(msg, type) { alertBox.textContent = msg; alertBox.className = `alert alert-${type}`; }
+function setLoading(on) {
+    submitBtn.disabled = on;
+    submitBtn.innerHTML = on ? '<span class="spinner"></span> Creating…' : '<span class="label">Create account</span>';
+}
+
+form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('username').value.trim();
+    const password = pwd.value;
+    const confirm = document.getElementById('confirm').value;
+
+    if (!username || !password) { showAlert('Username and password are required.', 'error'); return; }
+    if (username.length < 3) { showAlert('Username must be at least 3 characters.', 'error'); return; }
+    if (password !== confirm) { showAlert('Passwords do not match.', 'error'); return; }
+    if (score(password) < 2) { showAlert('Password is too weak — add more variety.', 'error'); return; }
+
+    setLoading(true);
+    try {
+        const res = await fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showAlert('Account created! Redirecting to sign in…', 'success');
+            setTimeout(() => window.location.href = '/login', 1200);
+        } else {
+            showAlert(data.message || 'Registration failed.', 'error');
+            setLoading(false);
+        }
+    } catch (err) {
+        showAlert('Network error. Please try again.', 'error');
+        setLoading(false);
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock %} · {{ app_name }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        // Apply saved theme before first paint to avoid flash. Default = light.
+        (function () {
+            try {
+                var t = localStorage.getItem('sms-theme');
+                if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+            } catch (_) {}
+        })();
+    </script>
+    <style>
+        /* ============ Design Tokens ============ */
+        /* Light theme (default) — soft off-white, professional */
+        :root {
+            --bg-base: #eef1f7;
+            --bg-elev-1: #ffffff;
+            --bg-elev-2: #f4f6fb;
+            --bg-elev-3: #eaeef6;
+            --border: rgba(22, 30, 55, 0.09);
+            --border-strong: rgba(22, 30, 55, 0.16);
+
+            --text-primary: #1b2138;
+            --text-secondary: #5a6480;
+            --text-muted: #8b94ac;
+
+            --accent: #5b51e8;
+            --accent-2: #7d6bf5;
+            --accent-glow: rgba(91, 81, 232, 0.28);
+            --accent-soft: rgba(91, 81, 232, 0.10);
+
+            --success: #0fa97f;
+            --success-soft: rgba(15, 169, 127, 0.12);
+            --danger: #e2495e;
+            --danger-soft: rgba(226, 73, 94, 0.10);
+            --warning: #d98a14;
+            --warning-soft: rgba(217, 138, 20, 0.12);
+
+            --grid-line: rgba(22, 30, 55, 0.035);
+            --on-accent: #ffffff;
+
+            --radius-sm: 10px;
+            --radius: 16px;
+            --radius-lg: 22px;
+            --shadow-lg: 0 24px 60px -16px rgba(40, 50, 90, 0.22);
+            --shadow-sm: 0 4px 16px rgba(40, 50, 90, 0.10);
+            --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+        }
+
+        /* Dark theme */
+        [data-theme="dark"] {
+            --bg-base: #0b0e16;
+            --bg-elev-1: #121726;
+            --bg-elev-2: #1a2133;
+            --bg-elev-3: #232c42;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-strong: rgba(255, 255, 255, 0.14);
+
+            --text-primary: #eef1f8;
+            --text-secondary: #9aa4be;
+            --text-muted: #67708c;
+
+            --accent: #6d5efc;
+            --accent-2: #9d7bff;
+            --accent-glow: rgba(109, 94, 252, 0.35);
+            --accent-soft: rgba(109, 94, 252, 0.12);
+
+            --success: #2dd4a7;
+            --success-soft: rgba(45, 212, 167, 0.12);
+            --danger: #f76d7c;
+            --danger-soft: rgba(247, 109, 124, 0.12);
+            --warning: #f5b945;
+            --warning-soft: rgba(245, 185, 69, 0.12);
+
+            --grid-line: rgba(255, 255, 255, 0.015);
+            --on-accent: #ffffff;
+
+            --shadow-lg: 0 24px 60px -12px rgba(0, 0, 0, 0.55);
+            --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body { height: 100%; }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg-base);
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+            line-height: 1.5;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+            transition: background .35s ease, color .35s ease;
+        }
+
+        /* Ambient gradient background */
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(60vw 60vw at 12% -10%, var(--accent-glow), transparent 60%),
+                radial-gradient(50vw 50vw at 100% 0%, var(--accent-soft), transparent 55%),
+                radial-gradient(45vw 45vw at 80% 110%, var(--success-soft), transparent 60%);
+            z-index: -2;
+            pointer-events: none;
+            opacity: .9;
+        }
+
+        /* Subtle grid texture */
+        body::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(var(--grid-line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+            background-size: 44px 44px;
+            z-index: -1;
+            pointer-events: none;
+            mask-image: radial-gradient(circle at 50% 30%, black, transparent 85%);
+        }
+
+        /* ============ Theme toggle ============ */
+        .theme-toggle {
+            position: fixed;
+            bottom: 24px; right: 24px;
+            z-index: 1100;
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: var(--bg-elev-1);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: grid; place-items: center;
+            box-shadow: 0 8px 24px -8px rgba(0,0,0,0.2);
+            transition: transform .15s, background .2s, color .2s, border-color .2s, box-shadow .2s;
+        }
+        .theme-toggle:hover { 
+            color: var(--accent); 
+            border-color: var(--border-strong); 
+            transform: scale(1.08); 
+            box-shadow: 0 12px 32px -8px rgba(91,81,232,0.3);
+        }
+        .theme-toggle svg { width: 19px; height: 19px; }
+        .theme-toggle .sun { display: none; }
+        [data-theme="dark"] .theme-toggle .sun { display: block; }
+        [data-theme="dark"] .theme-toggle .moon { display: none; }
+
+        .card-surface, .input, .btn, .alert, .theme-toggle { transition: background .25s, border-color .25s, color .25s, box-shadow .2s, transform .12s; }
+
+        a { color: var(--accent-2); text-decoration: none; transition: color .18s; }
+        a:hover { color: var(--accent); }
+
+        /* ============ Auth layout (centered card) ============ */
+        .auth-wrap {
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 32px 20px;
+        }
+
+        .auth-card {
+            width: 100%;
+            max-width: 420px;
+            background: linear-gradient(180deg, var(--bg-elev-1), var(--bg-base));
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            animation: rise .55s cubic-bezier(.2,.8,.2,1) both;
+        }
+
+        @keyframes rise {
+            from { opacity: 0; transform: translateY(18px) scale(.98); }
+            to   { opacity: 1; transform: none; }
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 30px 32px 6px;
+        }
+        .brand-logo {
+            width: 44px; height: 44px;
+            border-radius: 13px;
+            display: grid; place-items: center;
+            background: linear-gradient(140deg, var(--accent), var(--accent-2));
+            box-shadow: 0 8px 24px var(--accent-glow);
+            flex-shrink: 0;
+        }
+        .brand-logo svg { width: 22px; height: 22px; stroke: #fff; }
+        .brand-text h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.2px; }
+        .brand-text p { font-size: 12px; color: var(--text-muted); }
+
+        .auth-body { padding: 20px 32px 34px; }
+        .auth-body h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.4px; margin-bottom: 4px; }
+        .auth-body .sub { color: var(--text-secondary); font-size: 14px; margin-bottom: 24px; }
+
+        /* ============ Form controls ============ */
+        .field { margin-bottom: 16px; }
+        .field label {
+            display: block;
+            font-size: 12.5px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 7px;
+        }
+        .input {
+            width: 100%;
+            padding: 12px 14px;
+            background: var(--bg-elev-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: var(--font);
+            transition: border-color .18s, box-shadow .18s, background .18s;
+        }
+        .input::placeholder { color: var(--text-muted); }
+        .input:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: var(--bg-elev-3);
+            box-shadow: 0 0 0 4px var(--accent-soft);
+        }
+        .field small { display: block; margin-top: 6px; font-size: 11.5px; color: var(--text-muted); }
+
+        /* ============ Buttons ============ */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border: 1px solid transparent;
+            border-radius: var(--radius-sm);
+            font-family: var(--font);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform .12s, box-shadow .18s, background .18s, opacity .18s;
+            user-select: none;
+        }
+        .btn:active { transform: translateY(1px) scale(.99); }
+        .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            color: #fff;
+            box-shadow: 0 10px 24px -8px var(--accent-glow);
+        }
+        .btn-primary:hover:not(:disabled) { box-shadow: 0 14px 30px -8px var(--accent-glow); }
+
+        .btn-ghost {
+            background: var(--bg-elev-2);
+            color: var(--text-primary);
+            border-color: var(--border);
+        }
+        .btn-ghost:hover:not(:disabled) { background: var(--bg-elev-3); border-color: var(--border-strong); }
+
+        .btn-danger { background: var(--danger-soft); color: var(--danger); border-color: rgba(247,109,124,0.25); }
+        .btn-danger:hover:not(:disabled) { background: rgba(247,109,124,0.2); }
+
+        .btn-block { width: 100%; }
+
+        /* ============ Spinner ============ */
+        .spinner {
+            width: 16px; height: 16px;
+            border: 2px solid rgba(255,255,255,.35);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ============ Alerts / Toasts ============ */
+        .alert {
+            padding: 12px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 13.5px;
+            margin-bottom: 16px;
+            border: 1px solid transparent;
+            display: flex; align-items: center; gap: 9px;
+            animation: rise .3s ease both;
+        }
+        .alert-success { background: var(--success-soft); color: var(--success); border-color: rgba(45,212,167,.25); }
+        .alert-error   { background: var(--danger-soft);  color: var(--danger);  border-color: rgba(247,109,124,.25); }
+        .alert-info    { background: var(--accent-soft);  color: var(--accent-2);border-color: rgba(109,94,252,.25); }
+        .alert-warning { background: var(--warning-soft); color: var(--warning); border-color: rgba(245,185,69,.25); }
+
+        .toast {
+            position: fixed;
+            top: 22px; right: 22px;
+            z-index: 1000;
+            min-width: 280px; max-width: 380px;
+            box-shadow: var(--shadow-lg);
+            backdrop-filter: blur(10px);
+        }
+
+        .hidden { display: none !important; }
+
+        /* ============ Strength meter ============ */
+        .strength { display: flex; gap: 5px; margin-top: 9px; }
+        .strength span {
+            height: 4px; flex: 1; border-radius: 3px;
+            background: var(--bg-elev-3);
+            transition: background .25s;
+        }
+
+        /* Scrollbars */
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--bg-elev-3); border-radius: 8px; border: 2px solid var(--bg-base); }
+        ::-webkit-scrollbar-thumb:hover { background: #2e3a57; }
+
+        {% block extra_css %}{% endblock %}
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" id="themeToggle" title="Toggle light / dark" aria-label="Toggle theme">
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+    </button>
+
+    {% block body %}{% endblock %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        // Theme persistence — applied before paint via the inline head set below
+        (function () {
+            const toggle = document.getElementById('themeToggle');
+            function apply(theme) {
+                if (theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+                else document.documentElement.removeAttribute('data-theme');
+            }
+            toggle.addEventListener('click', () => {
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                const next = isDark ? 'light' : 'dark';
+                apply(next);
+                try { localStorage.setItem('sms-theme', next); } catch (_) {}
+            });
+        })();
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

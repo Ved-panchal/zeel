@@ -1,0 +1,569 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block extra_css %}
+    .app {
+        height: 100vh;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* ============ Tab Bar ============ */
+    .tab-bar {
+        background: var(--bg-elev-1);
+        border-bottom: 1px solid var(--border);
+        padding: 0 20px;
+        display: flex;
+        align-items: center;
+        height: 50px;
+        flex-shrink: 0;
+    }
+    .tab-list { display: flex; gap: 4px; height: 100%; }
+    .tab {
+        display: flex; align-items: center; gap: 8px;
+        padding: 0 16px;
+        border: none; background: transparent;
+        color: var(--text-secondary);
+        font-size: 13px; font-weight: 600;
+        cursor: pointer; border-radius: var(--radius-sm);
+        transition: background .15s, color .15s;
+        height: 100%;
+    }
+    .tab:hover { background: var(--bg-elev-2); color: var(--text-primary); }
+    .tab.active { background: var(--accent-soft); color: var(--accent); }
+    .tab svg { width: 16px; height: 16px; }
+    .tab-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+    .user-badge {
+        display: flex; align-items: center; gap: 8px;
+        padding: 6px 12px; border-radius: 20px;
+        background: var(--bg-elev-2); border: 1px solid var(--border);
+        font-size: 12px; font-weight: 600;
+    }
+    .user-badge .avatar {
+        width: 24px; height: 24px; font-size: 11px;
+    }
+
+    /* ============ Tab Panels ============ */
+    .panels { flex: 1; overflow: hidden; position: relative; }
+    .panel {
+        position: absolute; inset: 0;
+        display: none;
+    }
+    .panel.active { display: flex; }
+
+    /* ============ Messaging Panel ============ */
+    #panel-messaging {
+        display: none; /* controlled by JS */
+        grid-template-columns: 300px 1fr;
+    }
+    #panel-messaging.active { display: grid; }
+
+    .sidebar {
+        background: var(--bg-elev-1);
+        border-right: 1px solid var(--border);
+        display: flex; flex-direction: column; min-height: 0;
+    }
+    .user-profile {
+        padding: 16px; border-bottom: 1px solid var(--border);
+        display: flex; align-items: center; gap: 12px;
+        background: var(--bg-elev-2);
+    }
+    .user-profile .avatar {
+        width: 42px; height: 42px; font-size: 16px;
+    }
+    .user-profile .info { flex: 1; min-width: 0; }
+    .user-profile .info .name {
+        font-size: 14px; font-weight: 700; color: var(--text-primary);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .user-profile .info .status {
+        font-size: 11px; color: var(--success);
+        display: flex; align-items: center; gap: 4px; margin-top: 2px;
+    }
+    .user-profile .info .status::before {
+        content: ''; width: 6px; height: 6px; border-radius: 50%;
+        background: var(--success); display: inline-block;
+    }
+    .user-profile .logout-btn {
+        width: 32px; height: 32px; border-radius: 8px;
+        border: 1px solid var(--border); background: var(--bg-elev-1);
+        display: grid; place-items: center; cursor: pointer;
+        transition: all .15s; flex-shrink: 0;
+    }
+    .user-profile .logout-btn:hover {
+        background: var(--danger-soft); border-color: var(--danger);
+        color: var(--danger);
+    }
+    .user-profile .logout-btn svg { width: 16px; height: 16px; }
+    .sidebar-head { padding: 16px 16px 12px; }
+    .sidebar-section {
+        padding: 12px 16px 6px;
+        font-size: 10.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase;
+        color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;
+    }
+    .convo-list { flex: 1; overflow-y: auto; padding: 0 10px 10px; min-height: 0; }
+    .convo {
+        display: flex; align-items: center; gap: 10px;
+        padding: 10px 11px; border-radius: var(--radius-sm);
+        cursor: pointer; border: 1px solid transparent;
+        transition: background .15s, border-color .15s;
+        margin-bottom: 2px;
+    }
+    .convo:hover { background: var(--bg-elev-2); }
+    .convo.active { background: var(--accent-soft); border-color: rgba(91,81,232,.2); }
+    .convo .meta { flex: 1; min-width: 0; }
+    .convo .meta .name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .convo .meta .preview { font-size: 11.5px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .convo .badge-count {
+        background: var(--accent); color: #fff; font-size: 10px; font-weight: 700;
+        min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+        display: grid; place-items: center;
+    }
+    .empty-convos { padding: 24px 16px; text-align: center; color: var(--text-muted); font-size: 12px; }
+
+    .chat { display: flex; flex-direction: column; min-height: 0; background: var(--bg-base); }
+    .chat-head {
+        padding: 14px 20px; border-bottom: 1px solid var(--border);
+        display: flex; align-items: center; gap: 12px; background: var(--bg-elev-1);
+    }
+    .chat-head .title .name { font-size: 15px; font-weight: 700; }
+    .chat-head .title .sub { font-size: 11.5px; color: var(--text-secondary); }
+    .lock-pill {
+        display: inline-flex; align-items: center; gap: 5px;
+        font-size: 10.5px; font-weight: 600; color: var(--success);
+        background: var(--success-soft); padding: 4px 10px; border-radius: 16px;
+        border: 1px solid rgba(15,169,127,.22);
+    }
+    .lock-pill svg { width: 11px; height: 11px; }
+
+    .thread { flex: 1; overflow-y: auto; padding: 20px 20px; min-height: 0; }
+    .empty-state {
+        height: 100%; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; text-align: center;
+        color: var(--text-secondary); gap: 8px; padding: 32px;
+    }
+    .empty-state .glyph {
+        width: 64px; height: 64px; border-radius: 18px; margin-bottom: 12px;
+        display: grid; place-items: center;
+        background: var(--accent-soft); border: 1px solid rgba(91,81,232,.18);
+    }
+    .empty-state .glyph svg { width: 30px; height: 30px; stroke: var(--accent); }
+    .empty-state h3 { font-size: 16px; font-weight: 700; }
+    .empty-state p { font-size: 13px; max-width: 300px; }
+
+    .msg-row { display: flex; margin-bottom: 12px; animation: pop .25s ease both; }
+    @keyframes pop { from { opacity:0; transform: translateY(8px);} to {opacity:1; transform:none;} }
+    .msg-row.sent { justify-content: flex-end; }
+    .bubble {
+        max-width: 60%; padding: 10px 14px; border-radius: 16px;
+        font-size: 14px; word-wrap: break-word; overflow-wrap: anywhere;
+    }
+    .msg-row.received .bubble {
+        background: var(--bg-elev-1); border: 1px solid var(--border);
+        border-bottom-left-radius: 4px;
+    }
+    .msg-row.sent .bubble {
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        color: #fff; border-bottom-right-radius: 4px;
+        box-shadow: 0 6px 16px -6px var(--accent-glow);
+    }
+    .bubble .b-meta { display: flex; gap: 8px; align-items: center; margin-top: 5px; font-size: 10px; opacity: .75; }
+    .msg-row.sent .bubble .b-meta { justify-content: flex-end; }
+    .b-badge {
+        display: inline-flex; align-items: center; gap: 3px;
+        font-size: 9px; font-weight: 600; padding: 1px 6px; border-radius: 6px;
+    }
+    .b-badge.ok { background: var(--success-soft); color: var(--success); }
+    .msg-row.sent .b-badge.ok { background: rgba(255,255,255,.2); color: #fff; }
+    .b-badge.warn { background: var(--warning-soft); color: var(--warning); }
+
+    .composer { padding: 14px 20px 16px; border-top: 1px solid var(--border); background: var(--bg-elev-1); }
+    .composer-inner {
+        display: flex; align-items: flex-end; gap: 10px;
+        background: var(--bg-elev-2); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 7px 7px 7px 14px;
+        transition: border-color .18s, box-shadow .18s;
+    }
+    .composer-inner:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .composer textarea {
+        flex: 1; border: none; background: transparent; resize: none;
+        color: var(--text-primary); font-family: var(--font); font-size: 14px;
+        line-height: 1.5; max-height: 120px; padding: 7px 0; outline: none;
+    }
+    .composer textarea::placeholder { color: var(--text-muted); }
+    .send-btn {
+        width: 38px; height: 38px; border-radius: 10px; border: none;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        color: #fff; cursor: pointer; display: grid; place-items: center; flex-shrink: 0;
+        transition: transform .12s, box-shadow .18s;
+        box-shadow: 0 6px 16px -5px var(--accent-glow);
+    }
+    .send-btn:hover:not(:disabled) { transform: translateY(-1px); }
+    .send-btn:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+    .send-btn svg { width: 16px; height: 16px; }
+    .composer-foot {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-top: 7px; font-size: 11px; color: var(--text-muted); padding: 0 4px;
+    }
+
+    /* ============ Attacks Panel ============ */
+    #panel-attacks {
+        display: none; flex-direction: column; background: var(--bg-base);
+    }
+    #panel-attacks.active { display: flex; }
+    .attacks-container {
+        max-width: 900px; margin: 0 auto; width: 100%; padding: 24px;
+    }
+    .section-head { margin-bottom: 20px; }
+    .section-head h2 { font-size: 18px; font-weight: 700; }
+    .section-head p { color: var(--text-muted); font-size: 13px; }
+
+    .attack-controls {
+        display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px;
+        background: var(--bg-elev-1); padding: 16px; border-radius: var(--radius);
+        border: 1px solid var(--border);
+    }
+    .attack-controls .input-row {
+        display: flex; gap: 12px; align-items: flex-end;
+    }
+    .field { flex: 1; }
+    .field label { display: block; font-size: 11.5px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+    .input {
+        width: 100%; padding: 9px 12px; border-radius: var(--radius-sm);
+        background: var(--bg-elev-2); border: 1px solid var(--border);
+        color: var(--text-primary); font-size: 13px;
+    }
+    .input:focus { outline: none; border-color: var(--accent); background: var(--bg-elev-3); }
+    .btn-run {
+        padding: 10px 24px; border-radius: var(--radius-sm); border: none;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        color: #fff; font-weight: 600; font-size: 13px; cursor: pointer;
+        box-shadow: 0 6px 14px -5px var(--accent-glow);
+        transition: transform .12s, opacity .18s;
+        align-self: center; width: fit-content;
+    }
+    .btn-run:hover:not(:disabled) { transform: translateY(-1px); }
+    .btn-run:disabled { opacity: .5; cursor: not-allowed; }
+
+    .attack-results { margin-top: 16px; }
+    .attack-card {
+        background: var(--bg-elev-1); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px;
+        display: flex; align-items: center; gap: 12px;
+    }
+    .attack-card.success { border-color: rgba(15,169,127,.25); background: var(--success-soft); }
+    .attack-card.fail { border-color: rgba(226,73,94,.25); background: var(--danger-soft); }
+    .attack-card .icon {
+        width: 36px; height: 36px; border-radius: 10px;
+        display: grid; place-items: center; flex-shrink: 0;
+    }
+    .attack-card.success .icon { background: rgba(15,169,127,.15); color: var(--success); }
+    .attack-card.fail .icon { background: rgba(226,73,94,.15); color: var(--danger); }
+    .attack-card .icon svg { width: 18px; height: 18px; }
+    .attack-card .main { flex: 1; }
+    .attack-card .main .name { font-size: 13px; font-weight: 700; }
+    .attack-card .main .detail { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+    .attack-card .badge {
+        font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 12px;
+    }
+    .attack-card.success .badge { background: rgba(15,169,127,.2); color: var(--success); }
+    .attack-card.fail .badge { background: rgba(226,73,94,.2); color: var(--danger); }
+
+    .summary-box {
+        background: var(--bg-elev-1); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 16px; margin-top: 16px;
+        display: flex; gap: 24px;
+    }
+    .summary-item { flex: 1; text-align: center; }
+    .summary-item .val { font-size: 24px; font-weight: 800; color: var(--accent); }
+    .summary-item .lbl { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; }
+
+    /* ============ Logs Panel ============ */
+    #panel-logs {
+        display: none; flex-direction: column; background: var(--bg-base);
+    }
+    #panel-logs.active { display: flex; }
+    .logs-container {
+        max-width: 1100px; margin: 0 auto; width: 100%; padding: 24px;
+    }
+    .logs-filter {
+        display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .filter-btn {
+        padding: 6px 12px; border-radius: 18px; border: 1px solid var(--border);
+        background: var(--bg-elev-1); color: var(--text-secondary);
+        font-size: 12px; font-weight: 600; cursor: pointer;
+        transition: all .15s;
+    }
+    .filter-btn:hover { background: var(--bg-elev-2); }
+    .filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    .log-table {
+        background: var(--bg-elev-1); border: 1px solid var(--border);
+        border-radius: var(--radius); overflow: hidden;
+    }
+    .log-row {
+        display: grid; grid-template-columns: 140px 1fr 120px;
+        padding: 10px 14px; border-bottom: 1px solid var(--border);
+        font-size: 12px;
+    }
+    .log-row:last-child { border-bottom: none; }
+    .log-row:hover { background: var(--bg-elev-2); }
+    .log-row .time { color: var(--text-muted); font-family: var(--mono); }
+    .log-row .msg { color: var(--text-primary); }
+    .log-row .type { font-size: 10px; font-weight: 700; text-transform: uppercase;
+        padding: 2px 8px; border-radius: 8px; text-align: center; width: fit-content; margin-left: auto; }
+    .log-row .type.info { background: var(--accent-soft); color: var(--accent); }
+    .log-row .type.auth { background: var(--success-soft); color: var(--success); }
+    .log-row .type.crypto { background: var(--warning-soft); color: var(--warning); }
+    .log-row .type.error { background: var(--danger-soft); color: var(--danger); }
+
+    /* ============ System Info Panel ============ */
+    #panel-sysinfo {
+        display: none; flex-direction: column; background: var(--bg-base);
+    }
+    #panel-sysinfo.active { display: flex; }
+    .sysinfo-container {
+        max-width: 900px; margin: 0 auto; width: 100%; padding: 24px;
+    }
+    .info-grid {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;
+    }
+    .info-card {
+        background: var(--bg-elev-1); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 16px;
+    }
+    .info-card .card-title {
+        font-size: 12px; font-weight: 700; color: var(--text-muted);
+        text-transform: uppercase; letter-spacing: .6px; margin-bottom: 12px;
+    }
+    .info-row {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 8px 0; border-bottom: 1px solid var(--border);
+        font-size: 13px;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-row .key { color: var(--text-secondary); }
+    .info-row .val { font-weight: 600; font-family: var(--mono); }
+    .info-row .val.highlight { color: var(--accent); }
+
+    .avatar {
+        width: 36px; height: 36px; border-radius: 50%;
+        display: grid; place-items: center;
+        font-weight: 700; font-size: 14px; color: var(--on-accent);
+        flex-shrink: 0;
+    }
+
+    @media (max-width: 768px) {
+        #panel-messaging.active { grid-template-columns: 1fr; }
+        .sidebar { display: none; }
+        .info-grid { grid-template-columns: 1fr; }
+        .log-row { grid-template-columns: 80px 1fr 80px; }
+        .attack-controls .input-row { flex-direction: column; }
+        .attack-controls .btn-run { width: 100%; }
+    }
+{% endblock %}
+
+{% block body %}
+<div class="app">
+    <nav class="tab-bar">
+        <div class="tab-list">
+            <button class="tab active" data-tab="messaging" title="Secure Messaging">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                <span>Messaging</span>
+            </button>
+            <button class="tab" data-tab="attacks" title="Attack Simulations">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <span>Attack Simulation</span>
+            </button>
+            <button class="tab" data-tab="logs" title="Security Logs">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                    <polyline points="10 9 9 9 8 9"/>
+                </svg>
+                <span>Security Log</span>
+            </button>
+            <button class="tab" data-tab="sysinfo" title="System Information">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="16" x2="12" y2="12"/>
+                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+                <span>System Info</span>
+            </button>
+        </div>
+        <div class="tab-right">
+            <div class="user-badge">
+                <div class="avatar" id="meAvatar"></div>
+                <span>{{ username }}</span>
+            </div>
+            <button class="icon-btn" id="logoutBtn" title="Log out">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+            </button>
+        </div>
+    </nav>
+
+    <div class="panels">
+        <!-- Messaging Panel -->
+        <div class="panel active" id="panel-messaging">
+            <aside class="sidebar">
+                <div class="user-profile">
+                    <div class="avatar" id="sidebarAvatar"></div>
+                    <div class="info">
+                        <div class="name" id="sidebarUsername">{{ username }}</div>
+                        <div class="status">Online</div>
+                    </div>
+                    <button class="logout-btn" id="sidebarLogoutBtn" title="Logout">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                            <polyline points="16 17 21 12 16 7"/>
+                            <line x1="21" y1="12" x2="9" y2="12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="sidebar-head">
+                    <div class="sidebar-section">
+                        <span>Conversations</span>
+                        <button class="icon-btn" id="refreshBtn" style="width:24px;height:24px;border-radius:6px;padding:0;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;">
+                                <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="convo-list" id="convoList">
+                    <div class="empty-convos">Loading users…</div>
+                </div>
+            </aside>
+
+            <main class="chat">
+                <div class="chat-head">
+                    <div class="title">
+                        <div class="name" id="chatTitle">Select a conversation</div>
+                        <div class="sub" id="chatSub">Choose someone to start messaging securely</div>
+                    </div>
+                    <span class="lock-pill">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2"/>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
+                        AES-256 · E2E
+                    </span>
+                </div>
+
+                <div class="thread" id="thread">
+                    <div class="empty-state">
+                        <div class="glyph">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                            </svg>
+                        </div>
+                        <h3>Your messages are private</h3>
+                        <p>End-to-end encrypted with AES-256, RSA-2048 key exchange, and HMAC-SHA256 integrity.</p>
+                    </div>
+                </div>
+
+                <div class="composer">
+                    <div class="composer-inner">
+                        <textarea id="messageInput" rows="1" placeholder="Select a recipient to begin…" disabled></textarea>
+                        <button class="send-btn" id="sendBtn" disabled title="Send">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="22" y1="2" x2="11" y2="13"/>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="composer-foot">
+                        <span>Encrypted before sending</span>
+                        <span id="charCount">0 / 10000</span>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Attack Simulation Panel -->
+        <div class="panel" id="panel-attacks">
+            <div class="attacks-container">
+                <div class="section-head">
+                    <h2>Attack Simulation</h2>
+                    <p>Demonstrate how the system defends against MITM, replay, and brute-force attacks</p>
+                </div>
+
+                <div class="attack-controls">
+                    <div class="input-row">
+                        <div class="field">
+                            <label>Sender</label>
+                            <input class="input" id="attackUser1" value="alice" placeholder="username">
+                        </div>
+                        <div class="field">
+                            <label>Recipient</label>
+                            <input class="input" id="attackUser2" value="bob" placeholder="username">
+                        </div>
+                    </div>
+                    <button class="btn-run" id="runAttackBtn">
+                        Run Simulations
+                    </button>
+                </div>
+
+                <div class="attack-results" id="attackResults"></div>
+            </div>
+        </div>
+
+        <!-- Security Logs Panel -->
+        <div class="panel" id="panel-logs">
+            <div class="logs-container">
+                <div class="section-head">
+                    <h2>Security Log</h2>
+                    <p>Real-time audit trail of authentication, encryption, and system events</p>
+                </div>
+
+                <div class="logs-filter" id="logsFilter">
+                    <button class="filter-btn active" data-type="all">All</button>
+                    <button class="filter-btn" data-type="auth">Auth</button>
+                    <button class="filter-btn" data-type="crypto">Crypto</button>
+                    <button class="filter-btn" data-type="messaging">Messaging</button>
+                    <button class="filter-btn" data-type="attack">Attacks</button>
+                </div>
+
+                <div class="log-table" id="logTable">
+                    <div style="padding:24px;text-align:center;color:var(--text-muted);">Loading logs…</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Info Panel -->
+        <div class="panel" id="panel-sysinfo">
+            <div class="sysinfo-container">
+                <div class="section-head">
+                    <h2>System Information</h2>
+                    <p>Cryptographic parameters and current session stats</p>
+                </div>
+
+                <div class="info-grid" id="sysinfoGrid">
+                    <div style="padding:24px;text-align:center;color:var(--text-muted);">Loading…</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>window.CURRENT_USER = {{ username | tojson }};</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/dashboard.js"></script>
+{% endblock %}
