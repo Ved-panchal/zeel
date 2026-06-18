@@ -379,7 +379,7 @@ class Dashboard {
         const container = document.getElementById('logTable');
         const filtered = filterType === 'all'
             ? this.logs
-            : this.logs.filter(l => (l.event || '').toLowerCase().includes(filterType));
+            : this.logs.filter(l => this.logCategory(l) === filterType);
 
         if (!filtered.length) {
             container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);">No logs found.</div>';
@@ -387,10 +387,7 @@ class Dashboard {
         }
 
         container.innerHTML = filtered.map(l => {
-            const typeClass =
-                /error|fail/i.test(l.event) ? 'error' :
-                /login|register|logout/i.test(l.event) ? 'auth' :
-                /encrypt|decrypt|key/i.test(l.event) ? 'crypto' : 'info';
+            const typeClass = this.logCategory(l);
             return `
                 <div class="log-row">
                     <div class="time">${isoTime(l.timestamp)}</div>
@@ -399,6 +396,21 @@ class Dashboard {
                 </div>
             `;
         }).join('');
+    }
+
+    logCategory(log) {
+        const category = (log.category || '').toLowerCase();
+        if (category) return category;
+
+        const event = (log.event || '').toLowerCase();
+        const detail = (log.detail || '').toLowerCase();
+        const combined = `${event} ${detail}`;
+        if (/login|logout|register|auth|user:/.test(combined)) return 'auth';
+        if (/encrypt|decrypt|crypto|key|aes|rsa|hmac/.test(combined)) return 'crypto';
+        if (/message|sender|recipient|from:|to:/.test(combined)) return 'messaging';
+        if (/attack|mitm|brute|nonce|replay/.test(combined)) return 'attack';
+        if (/error|fail/.test(combined)) return 'error';
+        return 'info';
     }
 
     async loadSysInfo() {

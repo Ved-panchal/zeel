@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Dashboard{% endblock %}
 
+{% block theme_toggle %}
+{# Dashboard has its own theme toggle in the tab-right section #}
+{% endblock %}
+
 {% block extra_css %}
     .app {
         height: 100vh;
@@ -42,6 +46,21 @@
     }
     .user-badge .avatar {
         width: 24px; height: 24px; font-size: 11px;
+    }
+    .tab-right .icon-btn {
+        width: 32px; height: 32px; border-radius: 8px;
+        border: 1px solid var(--border); background: var(--bg-elev-1);
+        color: var(--text-secondary); cursor: pointer;
+        display: grid; place-items: center; padding: 0;
+        flex-shrink: 0;
+    }
+    .tab-right .icon-btn svg {
+        width: 16px; height: 16px;
+        stroke: currentColor;
+    }
+    .tab-right .icon-btn:hover {
+        color: var(--danger); border-color: rgba(226,73,94,.25);
+        background: var(--danger-soft);
     }
 
     /* ============ Tab Panels ============ */
@@ -88,14 +107,18 @@
     .user-profile .logout-btn {
         width: 32px; height: 32px; border-radius: 8px;
         border: 1px solid var(--border); background: var(--bg-elev-1);
+        color: var(--text-secondary);
         display: grid; place-items: center; cursor: pointer;
         transition: all .15s; flex-shrink: 0;
     }
     .user-profile .logout-btn:hover {
-        background: var(--danger-soft); border-color: var(--danger);
+        background: var(--danger-soft); border-color: rgba(226,73,94,.25);
         color: var(--danger);
     }
-    .user-profile .logout-btn svg { width: 16px; height: 16px; }
+    .user-profile .logout-btn svg {
+        width: 16px; height: 16px;
+        stroke: currentColor;
+    }
     .sidebar-head { padding: 16px 16px 12px; }
     .sidebar-section {
         padding: 12px 16px 6px;
@@ -282,10 +305,12 @@
     /* ============ Logs Panel ============ */
     #panel-logs {
         display: none; flex-direction: column; background: var(--bg-base);
+        overflow: hidden;
     }
     #panel-logs.active { display: flex; }
     .logs-container {
         max-width: 1100px; margin: 0 auto; width: 100%; padding: 24px;
+        height: 100%; min-height: 0; display: flex; flex-direction: column;
     }
     .logs-filter {
         display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
@@ -301,7 +326,8 @@
 
     .log-table {
         background: var(--bg-elev-1); border: 1px solid var(--border);
-        border-radius: var(--radius); overflow: hidden;
+        border-radius: var(--radius); overflow-y: auto; overflow-x: hidden;
+        flex: 1; min-height: 0; max-height: calc(100vh - 185px);
     }
     .log-row {
         display: grid; grid-template-columns: 140px 1fr 120px;
@@ -311,12 +337,15 @@
     .log-row:last-child { border-bottom: none; }
     .log-row:hover { background: var(--bg-elev-2); }
     .log-row .time { color: var(--text-muted); font-family: var(--mono); }
-    .log-row .msg { color: var(--text-primary); }
+    .log-row .msg { color: var(--text-primary); overflow-wrap: anywhere; }
     .log-row .type { font-size: 10px; font-weight: 700; text-transform: uppercase;
         padding: 2px 8px; border-radius: 8px; text-align: center; width: fit-content; margin-left: auto; }
     .log-row .type.info { background: var(--accent-soft); color: var(--accent); }
     .log-row .type.auth { background: var(--success-soft); color: var(--success); }
     .log-row .type.crypto { background: var(--warning-soft); color: var(--warning); }
+    .log-row .type.messaging { background: rgba(43,139,212,.12); color: #2b8bd4; }
+    .log-row .type.attack { background: var(--danger-soft); color: var(--danger); }
+    .log-row .type.system { background: var(--accent-soft); color: var(--accent); }
     .log-row .type.error { background: var(--danger-soft); color: var(--danger); }
 
     /* ============ System Info Panel ============ */
@@ -402,6 +431,22 @@
             </button>
         </div>
         <div class="tab-right">
+            <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+                <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+                <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="5"/>
+                    <line x1="12" y1="1" x2="12" y2="3"/>
+                    <line x1="12" y1="21" x2="12" y2="23"/>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                    <line x1="1" y1="12" x2="3" y2="12"/>
+                    <line x1="21" y1="12" x2="23" y2="12"/>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+            </button>
             <div class="user-badge">
                 <div class="avatar" id="meAvatar"></div>
                 <span>{{ username }}</span>
@@ -507,11 +552,11 @@
                     <div class="input-row">
                         <div class="field">
                             <label>Sender</label>
-                            <input class="input" id="attackUser1" value="alice" placeholder="username">
+                            <input class="input" id="attackUser1" value="" placeholder="username">
                         </div>
                         <div class="field">
                             <label>Recipient</label>
-                            <input class="input" id="attackUser2" value="bob" placeholder="username">
+                            <input class="input" id="attackUser2" value="" placeholder="username">
                         </div>
                     </div>
                     <button class="btn-run" id="runAttackBtn">
@@ -565,5 +610,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="/static/js/dashboard.js"></script>
+<script src="/static/js/dashboard.js?v=4"></script>
 {% endblock %}

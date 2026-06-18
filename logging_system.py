@@ -313,11 +313,20 @@ class SecurityLogger:
                             except json.JSONDecodeError:
                                 continue
             
+            category_map = {
+                'authentication': 'auth',
+                'crypto': 'crypto',
+                'messaging': 'messaging',
+                'attack': 'attack',
+                'system': 'system'
+            }
+
             # Convert to UI-friendly format
             formatted_entries = []
             for entry in entries[-limit:]:  # Get most recent
                 formatted_entries.append({
                     'timestamp': entry.get('timestamp', ''),
+                    'category': category_map.get(log_type, log_type),
                     'event': entry.get('event_type', entry.get('operation', 'SYSTEM_EVENT')),
                     'detail': self._format_log_detail(entry),
                     'severity': entry.get('severity', 'INFO')
